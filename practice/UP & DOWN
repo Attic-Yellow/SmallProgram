@@ -1,0 +1,50 @@
+// UP & DOWN GAME
+// 컴퓨터가 무작위로 1~999 숫자를 제공.
+// 10번의 시도 동안 숫자를 입력 후
+// 컴퓨터가 무작위로 선정한 숫자를 맞추면 정답.
+// 기회를 모두 소진하면 실패.
+// 기회가 남아있으면서 숫자가 정답이 아닐 때 UP or DOWN인지 알려주는 프로그램
+
+using System;
+
+internal class Program
+{
+    private static void Main(string[] args)
+    {
+        Random rand = new Random();
+
+        int num = rand.Next(999);
+        int answer;
+        int count = 0;
+
+        for (int i = 0; i < 10; i++)
+        {
+            count++;
+
+            answer = int.Parse(Console.ReadLine());
+
+            if (answer == num)
+            {
+                Console.WriteLine("정답입니다.");
+                break;
+            }
+            else if(answer < num)
+            {
+                Console.WriteLine("UP");
+                continue;
+            }
+            else
+            {
+                Console.WriteLine("DOWN");
+                continue;
+            }
+        }
+
+        if(count == 10)
+        {
+            Console.WriteLine("기회를 모두 소진하였습니다. 정답은 :" + num + " 이었습니다.");
+        }
+       
+
+    }
+}
