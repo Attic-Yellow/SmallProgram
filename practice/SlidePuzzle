@@ -1,3 +1,5 @@
+// 
+
 #include <iostream>
 #include <vector>
 #include <conio.h>
@@ -86,10 +88,15 @@ void shuffle(vector<vector<int>>& puzzleNum)
 	}
 
 	int rememberA, rememberB;
-	if (puzzleNum[4][4] != 0) {
-		for (int i = 0; i < 5; i++) {
-			for (int j = 0; j < 5; j++) {
-				if (puzzleNum[i][j] == 0) {
+
+	if (puzzleNum[4][4] != 0) 
+	{
+		for (int i = 0; i < 5; i++) 
+		{
+			for (int j = 0; j < 5; j++) 
+			{
+				if (puzzleNum[i][j] == 0) 
+				{
 					rememberA = i;
 					rememberB = j;
 					int temp = puzzleNum[4][4];
@@ -111,8 +118,10 @@ int main()
 	int row = 4;
 	int col = 4;
 
-	for (int i = 0; i < puzzleNum.size(); ++i) {
-		for (int j = 0; j < puzzleNum[i].size(); ++j) {
+	for (int i = 0; i < puzzleNum.size(); ++i) 
+	{
+		for (int j = 0; j < puzzleNum[i].size(); ++j) 
+		{
 			puzzleNum[i][j] = i * puzzleNum.size() + j + 1;
 		}
 	}
