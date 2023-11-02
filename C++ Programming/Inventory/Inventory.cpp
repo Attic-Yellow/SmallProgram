@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <conio.h>
+#include <windows.h>
 
 #define LEFT    75
 #define RIGHT   77
@@ -9,256 +10,618 @@
 
 using namespace std;
 
-enum PlayerLevel
+enum class PlayerLevel
 {
-	LEVEL_1 = 3,
-	LEVEL_2 = 4,
-	LEVEL_3 = 5,
-	LEVEL_4 = 6,
-
+    LEVEL_1 = 3,
+    LEVEL_2 = 4,
+    LEVEL_3 = 5,
+    LEVEL_4 = 6
 };
 
-enum Item
+enum class Item
 {
-	ITEM_0 = 0,
-	ITEM_1 = 1,
-	ITEM_2 = 2,
-	ITEM_3 = 3,
-	ITEM_4 = 4
-
+    ITEM_0 = 0,
+    ITEM_1 = 1,
+    ITEM_2 = 2,
+    ITEM_3 = 3,
+    ITEM_4 = 4,
+    ITEM_5 = 5
 };
 
-string getPlayerChoice(PlayerLevel playerLevel)
+enum class MenuOption
 {
-	switch (playerLevel)
-	{
-	case LEVEL_1:
-		return "\t3 x 3 공간";
-	case LEVEL_2:
-		return "\t4 x 4 공간";
-	case LEVEL_3:
-		return "\t5 x 5 공간";
-	case LEVEL_4:
-		return "\t6 x 6 공간";
-	default:
-		return "비어있는 공간";
-	}
-}
+    OPTION_ITEM_PUT = 1,
+    OPTION_BACK = 2,
+    OPTION_SELECT = 3,
+    OPTION_INFO = 4,
+    OPTION_SWITCH_POSITION = 5
+};
 
-string getItemChoice(Item item)
+class GameDisplay
 {
-	switch (item)
-	{
-	case ITEM_0:
-		return "\t 아이템 0";
-	case ITEM_1:
-		return "\t 아이템 1";
-	case ITEM_2:
-		return "\t 아이템 2";
-	case ITEM_3:
-		return "\t 아이템 3";
-	default:
-		return "비어있는 공간";
-	}
-}
+public:
+    static string getPlayerChoice(PlayerLevel playerLevel);
+    static string getItemChoice(Item item);
+};
 
-
-void printPlayer(vector<int>& player, int row)
+class Player
 {
-	system("cls");
+private:
+    vector<PlayerLevel> playerChoice;
 
-	cout << "\n\n" << "\t 공간 크기 설정" << "\n\n";
+public:
+    Player();
+    void print(int row);
+    PlayerLevel getSelectedPlayerType(int row);
+};
 
-	for (int i = 0; i < player.size(); i++)
-	{
-
-		cout << getPlayerChoice(static_cast<PlayerLevel>(player[i])) << (i == row ? "\t◀" : "") << "\n\n";
-	}
-}
-
-void printInven(vector<vector<int>>& inven, int row, int col)
+class Inventory
 {
-	system("cls");
+private:
+    vector<vector<Item>> inven;
 
-	cout << "\n\n" << "\n\n" << "\t\t|";
-	for (int i = 0; i < inven.size(); i++)
-	{
-		cout << "--------------------------------";
-	}
-	cout << "|\n";
+    void setCursorPosition(int x, int y)
+    {
+        COORD coord;
+        coord.X = x;
+        coord.Y = y;
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+    }
 
-	for (int i = 0; i < inven.size(); i++)
-	{
-		cout << "\t\t| ";
+    COORD getConsoleSize()
+    {
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+        COORD size = { csbi.srWindow.Right - csbi.srWindow.Left + 1, csbi.srWindow.Bottom - csbi.srWindow.Top + 1 };
+        return size;
+    }
 
-		for (int j = 0; j < inven[i].size(); j++)
-		{
-			cout << "\t" << "  " << getPlayerChoice(static_cast<PlayerLevel>(inven[i][j])) << (i == row && j == col ? " ◀" : "\t") << "\t |";
-		}
-		cout << "\n" << "\t\t|";
-		for (int i = 0; i < inven.size(); i++)
-		{
-			cout << "--------------------------------";
-		}
-		cout << "|\n";
-	}
-}
+    int getDisplayLength(const std::string& str) {
+        int length = 0;
+        for (char c : str) {
+            if ((c & 0x80) == 0)
+                length += 1;
+            else if ((c & 0xE0) == 0xC0)
+                length += 2;
+            else if ((c & 0xF0) == 0xE0)
+                length += 2;
+        }
+        return length;
+    }
+    ;
 
-void initializePlayer(vector<int>& player)
+public:
+    void setItem(int row, int col, Item item);
+    Item getItem(int row, int col);
+    bool isEmpty(int row, int col);
+    Inventory(int num);
+    void print(int row, int col);
+    void printMenu(vector<MenuOption>& menuOptions, int& selectedIndex);
+    vector<MenuOption> getMenuOptions(bool emptySlot);
+};
+
+class ItemSelector
 {
-	player[0] = LEVEL_1;
-	player[1] = LEVEL_2;
-	player[2] = LEVEL_3;
-	player[3] = LEVEL_4;
-}
+private:
+    vector<Item> items;
+    int selectedIndex;
 
-void initializeInven(vector<vector<int>>& inven)
+public:
+    ItemSelector();
+    Item chooseItem();
+    void printItems();
+};
+
+class Menu
 {
-	inven[0][0] = ITEM_1;
-	inven[0][1] = ITEM_2;
-	inven[0][2] = ITEM_3;
-	inven[0][3] = ITEM_4;
-}
+    void setCursorPosition(int x, int y)
+    {
+        COORD coord;
+        coord.X = x;
+        coord.Y = y;
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+    }
 
+    COORD getConsoleSize()
+    {
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+        COORD size = { csbi.srWindow.Right - csbi.srWindow.Left + 1, csbi.srWindow.Bottom - csbi.srWindow.Top + 1 };
+        return size;
+    }
 
-// 방향키를 입력받는 함수
-int pressKey()
+    int getDisplayLength(const std::string& str) {
+        return str.length();
+    }
+private:
+    vector<MenuOption> options;
+    int selectedIndex;
+
+public:
+    Menu(const vector<MenuOption>& options);
+    std::pair<bool, Item> navigateMenu();
+    void printMenu();
+    MenuOption getSelectedOption() const;
+};
+
+class Game
 {
-	int key;
-	key = _getch();
+public:
+    static int pressKey();
+    static void Ineventory(int num);
+};
 
-	if (key == 224)
-	{
-		return _getch();
-	}
-
-	return 0;
-}
-
-void Puzzle(int& num, int& row, int& col)
-{
-	vector<vector<int>> inven(num, vector<int>(num));
-
-	for (int i = 0; i < inven.size(); ++i)
-	{
-		for (int j = 0; j < inven[i].size(); ++j)
-		{
-			inven[i][j] = 0;
-		}
-	}
-
-	while (1)
-	{
-		printInven(inven, row, col);
-
-		cout << "\n\t\t>> 방향키( ←, ↓, ↑, → )를 통하여 조작 하세요!!\n";
-
-		int key = pressKey();
-
-		switch (key)
-		{
-		case LEFT:
-			if (col > 0)
-			{
-				col--;
-			}
-			break;
-
-		case RIGHT:
-			if (col < inven[row].size() - 1)
-			{
-				col++;
-			}
-			break;
-
-		case DOWN:
-			if (row < inven.size() - 1)
-			{
-				row++;
-			}
-
-			break;
-
-		case UP:
-
-			if (row > 0)
-			{
-				row--;
-			}
-
-			break;
-
-		default:
-			continue;
-		}
-
-	}
-
-}
+int getDisplayLength(const string& s);
+void initializePlayer(vector<PlayerLevel>& player);
+void initializeInven(vector<vector<Item>>& inven);
 
 int main()
 {
+    Player player;
+    PlayerLevel selectedPlayerType = PlayerLevel::LEVEL_1;
+    int num = 0;
+    int row = 0;
+    int col = 1;
 
-	vector<int> playerChoice(4);
+    while (1)
+    {
+        player.print(row);
+        int key = Game::pressKey();
 
-	vector<vector<int>> inven(10, vector<int>(10));
+        switch (key)
+        {
+        case DOWN:
+            if (row < 3)
+                row++;
+            else
+                row = 0;
+            break;
+        case UP:
+            if (row > 0)
+                row--;
+            else
+                row = 3;
+            break;
+        case 'z':
+            selectedPlayerType = player.getSelectedPlayerType(row);
+            num = static_cast<int>(selectedPlayerType);
+            row = num - 1;
+            col = num - 1;
+            Game::Ineventory(num);
+            return EXIT_SUCCESS;
+        default:
+            continue;
+        }
+    }
+    return 0;
+}
 
-	int num = 0;
+string GameDisplay::getPlayerChoice(PlayerLevel playerLevel)
+{
+    switch (playerLevel)
+    {
+    case PlayerLevel::LEVEL_1:
+        return "\t3 x 3 공간";
+    case PlayerLevel::LEVEL_2:
+        return "\t4 x 4 공간";
+    case PlayerLevel::LEVEL_3:
+        return "\t5 x 5 공간";
+    case PlayerLevel::LEVEL_4:
+        return "\t6 x 6 공간";
+    default:
+        return "\t비어있는 공간";
+    }
+}
 
-	initializePlayer(playerChoice);
-
-	PlayerLevel selectedPlayerType = LEVEL_1;
-	Item selectedItem = ITEM_0;
-
-	int row = 0;
-	int col = 1;
-
-	while (1)
-	{
-
-		string result = "a";
-		printPlayer(playerChoice, row);
-		int key = pressKey();
-
-		switch (key)
-		{
-		case DOWN:
-			if (row < playerChoice.size() - 1)
-			{
-				row++;
-			}
-			else if (row == 3)
-			{
-				row = 0;
-			}
-			break;
-		case UP:
-			if (row > 0)
-			{
-				row--;
-			}
-			else if (row == 0)
-			{
-				row = 3;
-			}
-			break;
-		case RIGHT:
-
-			// 유저가 선택한 레벨을 저장함
-			selectedPlayerType = static_cast<PlayerLevel>(playerChoice[row]);
-
-			num = selectedPlayerType;
-
-			row = num - 1;
-			col = num - 1;
-
-			Puzzle(num, row, col);
-
-			return EXIT_SUCCESS;
-		default:
-			continue;
-		}
-	}
+string GameDisplay::getItemChoice(Item item)
+{
+    switch (item)
+    {
+    case Item::ITEM_0:
+        return "검";
+    case Item::ITEM_1:
+        return "방패";
+    case Item::ITEM_2:
+        return "지팡이";
+    case Item::ITEM_3:
+        return "활";
+    case Item::ITEM_4:
+        return "뒤로 가기";
+    case Item::ITEM_5:
+        return "비어 있는 공간";
+    default:
+        return "알 수 없음";
+    }
+}
 
 
+Player::Player()
+{
+    initializePlayer(playerChoice);
+}
+
+
+void Player::print(int row)
+{
+    system("cls");
+    cout << "\n\n" << "\t\t 공간 크기 설정" << "\n\n";
+    for (int i = 0; i < playerChoice.size(); i++)
+    {
+        cout << "\t" << GameDisplay::getPlayerChoice(playerChoice[i]) << (i == row ? "\t◀" : "") << "\n\n";
+    }
+    cout << "\n\t\t>> 방향키( ↓, ↑ ) 또는 'z'( 선택 )를 눌러주세요!!\n";
+}
+
+PlayerLevel Player::getSelectedPlayerType(int row)
+{
+    return playerChoice[row];
+}
+
+Inventory::Inventory(int num)
+{
+    inven.resize(num, vector<Item>(num));
+    initializeInven(inven);
+}
+
+string centeredString(const string& s, int totalWidth) {
+    int padding = totalWidth - getDisplayLength(s);
+    int paddingLeft = padding / 2;
+    int paddingRight = padding - paddingLeft;
+    return string(paddingLeft, ' ') + s + string(paddingRight, ' ');
+}
+
+void Inventory::print(int row, int col)
+{
+    system("cls");
+
+    int cellWidth = 25;
+    int invenSize = inven.size();
+    int totalWidth = invenSize * cellWidth + invenSize - 1;
+
+    COORD consoleSize = getConsoleSize();
+    int startX = (consoleSize.X - totalWidth) / 2;
+    int startY = (consoleSize.Y - (invenSize * 2)) / 2;
+
+    setCursorPosition(startX, startY);
+
+    cout << "+" << string(totalWidth, '-') << "+" << endl;
+    startY++;
+    setCursorPosition(startX, startY);
+
+    for (int i = 0; i < invenSize; i++)
+    {
+        for (int j = 0; j < invenSize; j++)
+        {
+            string itemText = GameDisplay::getItemChoice(inven[i][j]);
+            string paddingLeft((cellWidth - itemText.size() - 2) / 2, ' ');
+            string paddingRight = paddingLeft;
+
+            if (itemText.size() % 2 == 1)
+                paddingLeft.pop_back();
+
+            if (i == row && j == col)
+            {
+                cout << "|" + paddingLeft + itemText + paddingRight + "◀";
+            }
+            else
+            {
+                cout << "|" + paddingLeft + " " + itemText + paddingRight + " ";
+            }
+        }
+        cout << "|" << endl;
+
+        if (i != invenSize - 1)
+        {
+            setCursorPosition(startX, startY + i * 2 + 1);
+            for (int j = 0; j < invenSize; j++)
+            {
+                cout << "+" << string(cellWidth, '-');
+            }
+            cout << "+" << endl;
+            setCursorPosition(startX, startY + i * 2 + 2);
+        }
+    }
+
+    setCursorPosition(startX, startY + invenSize * 2 - 1);
+    cout << "+" << string(totalWidth, '-') << "+";
+}
+
+
+
+Menu::Menu(const vector<MenuOption>& options) : options(options), selectedIndex(0) {}
+
+void Menu::printMenu()
+{
+    system("cls");
+
+    int cellWidth = 30;
+    int menuHeight = options.size() * 2 + 3;
+    COORD consoleSize = getConsoleSize();
+    int startX = (consoleSize.X - cellWidth) / 2;
+    int startY = (consoleSize.Y - menuHeight) / 2;
+
+    setCursorPosition((consoleSize.X - 6) / 2, startY);
+    cout << "메뉴 선택" << endl;
+
+    startY++;
+
+    setCursorPosition(startX, startY);
+    cout << "+" << string(cellWidth, '-') << "+";
+    startY++;
+
+    for (int i = 0; i < options.size(); i++)
+    {
+        setCursorPosition(startX, startY + i * 2);
+        string menuText;
+        switch (options[i])
+        {
+        case MenuOption::OPTION_ITEM_PUT: menuText = "아이템 넣기"; break;
+        case MenuOption::OPTION_BACK: menuText = "뒤로 가기"; break;
+        case MenuOption::OPTION_SELECT: menuText = "선택"; break;
+        case MenuOption::OPTION_INFO: menuText = "정보"; break;
+        case MenuOption::OPTION_SWITCH_POSITION: menuText = "위치 바꾸기"; break;
+        }
+
+        int paddingSize = (cellWidth - menuText.size()) / 2;
+        string paddingLeft(paddingSize, ' ');
+        string paddingRight = paddingLeft;
+
+        if (menuText.size() % 2 == 1)  // 메뉴 텍스트의 길이가 홀수일 경우 한 칸 더 패딩
+            paddingLeft.pop_back();
+
+        if (i == selectedIndex)
+        {
+            cout << "|" + paddingLeft + menuText + paddingRight + "◀|";
+        }
+        else
+        {
+            cout << "|" + paddingLeft + menuText + paddingRight + "|";
+        }
+
+        cout << endl;
+
+        if (i != options.size() - 1)
+        {
+            setCursorPosition(startX, startY + i * 2 + 1);
+            cout << "+" << string(cellWidth, '-') << "+";
+        }
+    }
+
+    setCursorPosition(startX, startY + menuHeight - 4);
+    cout << "+" << string(cellWidth, '-') << "+";
+    setCursorPosition(startX, startY + menuHeight - 2);
+    cout << ">> 방향키( ↓, ↑ ) 또는 'z'( 선택 )를 눌러주세요!!";
+}
+
+std::pair<bool, Item> Menu::navigateMenu()
+{
+    while (true)
+    {
+        printMenu();
+        int key = Game::pressKey();
+
+        switch (key)
+        {
+        case UP:
+            if (selectedIndex > 0) selectedIndex--;
+            else selectedIndex = options.size() - 1;
+            break;
+        case DOWN:
+            if (selectedIndex < options.size() - 1) selectedIndex++;
+            else selectedIndex = 0;
+            break;
+        case 'z':
+            switch (options[selectedIndex])
+            {
+            case MenuOption::OPTION_BACK:
+                return { false, Item::ITEM_0 };
+            case MenuOption::OPTION_ITEM_PUT:
+            {
+                ItemSelector itemSelector;
+                Item chosenItem = itemSelector.chooseItem();
+                return { true, chosenItem };
+            }
+
+            }
+            break;
+        default:
+            continue;
+        }
+    }
+}
+
+
+vector<MenuOption> Inventory::getMenuOptions(bool emptySlot)
+{
+    if (emptySlot)
+    {
+        return { MenuOption::OPTION_ITEM_PUT, MenuOption::OPTION_BACK };
+    }
+    else
+    {
+        return { MenuOption::OPTION_SELECT, MenuOption::OPTION_INFO, MenuOption::OPTION_SWITCH_POSITION, MenuOption::OPTION_BACK };
+    }
+}
+
+MenuOption Menu::getSelectedOption() const
+{
+    return options[selectedIndex];
+}
+
+void ItemSelector::printItems()
+{
+    system("cls");
+    cout << "\n\n" << "\t\t 아이템 선택" << "\n\n";
+
+    for (int i = 0; i < items.size(); i++)
+    {
+        switch (items[i])
+        {
+        case Item::ITEM_0:
+            cout << "\t\t 검";
+            break;
+        case Item::ITEM_1:
+            cout << "\t\t 방패";
+            break;
+        case Item::ITEM_2:
+            cout << "\t\t 지팡이";
+            break;
+        case Item::ITEM_3:
+            cout << "\t\t 활";
+            break;
+        case Item::ITEM_4:
+            cout << "\t\t 뒤로 가기";
+            break;
+        case Item::ITEM_5:
+            cout << "\t\t 비어 있는 공간";
+            break;
+        default:
+            cout << "\t\t 알 수 없음";
+        }
+
+        cout << (i == selectedIndex ? " ◀" : "") << "\n\n";
+    }
+
+    cout << "\n\t\t>> 방향키( ↓, ↑ ) 또는 'z'( 선택 )를 눌러주세요!!\n";
+}
+
+void Inventory::setItem(int row, int col, Item item)
+{
+    inven[row][col] = item;
+}
+
+Item Inventory::getItem(int row, int col)
+{
+    return inven[row][col];
+}
+
+ItemSelector::ItemSelector() : selectedIndex(0)
+{
+    items.push_back(Item::ITEM_0);
+    for (int i = static_cast<int>(Item::ITEM_1); i < static_cast<int>(Item::ITEM_5); ++i)
+    {
+        items.push_back(static_cast<Item>(i));
+    }
+}
+
+Item ItemSelector::chooseItem()
+{
+    while (true)
+    {
+        printItems();
+        int key = Game::pressKey();
+
+        switch (key)
+        {
+        case UP:
+            if (selectedIndex > 0) selectedIndex--;
+            else selectedIndex = items.size() - 1;
+            break;
+        case DOWN:
+            if (selectedIndex < items.size() - 1) selectedIndex++;
+            else selectedIndex = 0;
+            break;
+        case 'z':
+            return items[selectedIndex];
+        default:
+            continue;
+        }
+    }
+}
+
+bool Inventory::isEmpty(int row, int col)
+{
+    return inven[row][col] == Item::ITEM_5;
+}
+
+int Game::pressKey()
+{
+    int key = _getch();
+    if (key == 224)
+    {
+        return _getch();
+    }
+    return key;
+}
+
+void Game::Ineventory(int num)
+{
+    Inventory inven(num);
+    int row = num - 1;
+    int col = num - 1;
+
+    while (1)
+    {
+        inven.print(row, col);
+        cout << "\n\t\t>> 방향키( ←, ↓, ↑, → ) 또는 'z'( 선택 )를 눌러주세요!!\n";
+        int key = pressKey();
+
+        switch (key)
+        {
+        case LEFT:
+            if (col > 0)
+                col--;
+            break;
+        case RIGHT:
+            if (col < num - 1)
+                col++;
+            break;
+        case DOWN:
+            if (row < num - 1)
+                row++;
+            break;
+        case UP:
+            if (row > 0)
+                row--;
+            break;
+        case 'z':
+        {
+            vector<MenuOption> menuOptions = inven.getMenuOptions(inven.isEmpty(row, col));
+            Menu menu(menuOptions);
+            auto menuResult = menu.navigateMenu();
+            if (!menuResult.first)
+                continue;
+            if (menuResult.second == Item::ITEM_4)
+                continue;
+            inven.setItem(row, col, menuResult.second);
+            break;
+        }
+        default:
+            continue;
+        }
+    }
+}
+
+int getDisplayLength(const string& s)
+{
+    int length = 0;
+    for (char c : s) {
+        if ((c & 0x80) != 0)
+            length += 2;
+        else
+            length += 1;
+    }
+    return length;
+}
+
+
+void initializePlayer(vector<PlayerLevel>& player)
+{
+    player.clear();
+    player.push_back(PlayerLevel::LEVEL_1);
+    player.push_back(PlayerLevel::LEVEL_2);
+    player.push_back(PlayerLevel::LEVEL_3);
+    player.push_back(PlayerLevel::LEVEL_4);
+}
+
+
+void initializeInven(vector<vector<Item>>& inven)
+{
+    for (int i = 0; i < inven.size(); i++)
+    {
+        for (int j = 0; j < inven[i].size(); j++)
+        {
+            inven[i][j] = Item::ITEM_5;
+        }
+    }
 }
