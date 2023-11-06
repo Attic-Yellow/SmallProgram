@@ -39,27 +39,7 @@ enum class MenuOption
 
 class GameDisplay
 {
-public:
-    static string getPlayerChoice(PlayerLevel playerLevel);
-    static string getItemChoice(Item item);
-};
-
-class Player
-{
-private:
-    vector<PlayerLevel> playerChoice;
-
-public:
-    Player();
-    void print(int row);
-    PlayerLevel getSelectedPlayerType(int row);
-};
-
-class Inventory
-{
-private:
-    vector<vector<Item>> inven;
-
+protected:
     void setCursorPosition(int x, int y)
     {
         COORD coord;
@@ -88,7 +68,27 @@ private:
         }
         return length;
     }
-    ;
+
+public:
+    static string getPlayerChoice(PlayerLevel playerLevel);
+    static string getItemChoice(Item item);
+};
+
+class Player
+{
+private:
+    vector<PlayerLevel> playerChoice;
+
+public:
+    Player();
+    void print(int row);
+    PlayerLevel getSelectedPlayerType(int row);
+};
+
+class Inventory : public GameDisplay
+{
+private:
+    vector<vector<Item>> inven;
 
 public:
     void setItem(int row, int col, Item item);
@@ -100,39 +100,22 @@ public:
     vector<MenuOption> getMenuOptions(bool emptySlot);
 };
 
-class ItemSelector
+class ItemSelector : GameDisplay
 {
 private:
     vector<Item> items;
     int selectedIndex;
 
 public:
+    ItemSelector(const vector<Item>& items);
     ItemSelector();
     Item chooseItem();
     void printItems();
+    vector<Item> getItemSelector() const;
 };
 
-class Menu
+class Menu : public GameDisplay
 {
-    void setCursorPosition(int x, int y)
-    {
-        COORD coord;
-        coord.X = x;
-        coord.Y = y;
-        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-    }
-
-    COORD getConsoleSize()
-    {
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-        COORD size = { csbi.srWindow.Right - csbi.srWindow.Left + 1, csbi.srWindow.Bottom - csbi.srWindow.Top + 1 };
-        return size;
-    }
-
-    int getDisplayLength(const std::string& str) {
-        return str.length();
-    }
 private:
     vector<MenuOption> options;
     int selectedIndex;
@@ -151,7 +134,6 @@ public:
     static void Ineventory(int num);
 };
 
-int getDisplayLength(const string& s);
 void initializePlayer(vector<PlayerLevel>& player);
 void initializeInven(vector<vector<Item>>& inven);
 
@@ -159,7 +141,7 @@ int main()
 {
     Player player;
     PlayerLevel selectedPlayerType = PlayerLevel::LEVEL_1;
-    int num = 0;
+    int inventorySize = 0;
     int row = 0;
     int col = 1;
 
@@ -184,10 +166,10 @@ int main()
             break;
         case 'z':
             selectedPlayerType = player.getSelectedPlayerType(row);
-            num = static_cast<int>(selectedPlayerType);
-            row = num - 1;
-            col = num - 1;
-            Game::Ineventory(num);
+            inventorySize = static_cast<int>(selectedPlayerType);
+            row = inventorySize - 1;
+            col = inventorySize - 1;
+            Game::Ineventory(inventorySize);
             return EXIT_SUCCESS;
         default:
             continue;
@@ -228,12 +210,11 @@ string GameDisplay::getItemChoice(Item item)
     case Item::ITEM_4:
         return "뒤로 가기";
     case Item::ITEM_5:
-        return "비어 있는 공간";
+        return "비어 있음";
     default:
         return "알 수 없음";
     }
 }
-
 
 Player::Player()
 {
@@ -263,20 +244,13 @@ Inventory::Inventory(int num)
     initializeInven(inven);
 }
 
-string centeredString(const string& s, int totalWidth) {
-    int padding = totalWidth - getDisplayLength(s);
-    int paddingLeft = padding / 2;
-    int paddingRight = padding - paddingLeft;
-    return string(paddingLeft, ' ') + s + string(paddingRight, ' ');
-}
-
 void Inventory::print(int row, int col)
 {
     system("cls");
 
     int cellWidth = 25;
     int invenSize = inven.size();
-    int totalWidth = invenSize * cellWidth + invenSize - 1;
+    int totalWidth = invenSize * cellWidth + invenSize - 4;
 
     COORD consoleSize = getConsoleSize();
     int startX = (consoleSize.X - totalWidth) / 2;
@@ -315,7 +289,7 @@ void Inventory::print(int row, int col)
             setCursorPosition(startX, startY + i * 2 + 1);
             for (int j = 0; j < invenSize; j++)
             {
-                cout << "+" << string(cellWidth, '-');
+                cout << "+" << string(cellWidth - 1, '-');
             }
             cout << "+" << endl;
             setCursorPosition(startX, startY + i * 2 + 2);
@@ -326,21 +300,19 @@ void Inventory::print(int row, int col)
     cout << "+" << string(totalWidth, '-') << "+";
 }
 
-
-
 Menu::Menu(const vector<MenuOption>& options) : options(options), selectedIndex(0) {}
 
 void Menu::printMenu()
 {
     system("cls");
 
-    int cellWidth = 30;
+    int cellWidth = 25;
     int menuHeight = options.size() * 2 + 3;
     COORD consoleSize = getConsoleSize();
     int startX = (consoleSize.X - cellWidth) / 2;
     int startY = (consoleSize.Y - menuHeight) / 2;
 
-    setCursorPosition((consoleSize.X - 6) / 2, startY);
+    setCursorPosition((consoleSize.X - 7) / 2, startY);
     cout << "메뉴 선택" << endl;
 
     startY++;
@@ -357,28 +329,28 @@ void Menu::printMenu()
         {
         case MenuOption::OPTION_ITEM_PUT: menuText = "아이템 넣기"; break;
         case MenuOption::OPTION_BACK: menuText = "뒤로 가기"; break;
-        case MenuOption::OPTION_SELECT: menuText = "선택"; break;
-        case MenuOption::OPTION_INFO: menuText = "정보"; break;
-        case MenuOption::OPTION_SWITCH_POSITION: menuText = "위치 바꾸기"; break;
+        case MenuOption::OPTION_SELECT: menuText = "정보 보기"; break;
+        case MenuOption::OPTION_INFO: menuText = "사용 하기"; break;
+        case MenuOption::OPTION_SWITCH_POSITION: menuText = "조합 하기"; break;
         }
 
         int paddingSize = (cellWidth - menuText.size()) / 2;
         string paddingLeft(paddingSize, ' ');
-        string paddingRight = paddingLeft;
+        string paddingRight(paddingSize, ' ');
 
-        if (menuText.size() % 2 == 1)  // 메뉴 텍스트의 길이가 홀수일 경우 한 칸 더 패딩
+        if (menuText.size() % 2 == 1)
             paddingLeft.pop_back();
 
         if (i == selectedIndex)
         {
-            cout << "|" + paddingLeft + menuText + paddingRight + "◀|";
+            cout << "|" + paddingLeft + menuText + paddingLeft + "◀";
         }
         else
         {
-            cout << "|" + paddingLeft + menuText + paddingRight + "|";
+            cout << "|" + paddingLeft + " " + menuText + paddingRight;
         }
 
-        cout << endl;
+        cout << "|" << endl;
 
         if (i != options.size() - 1)
         {
@@ -393,7 +365,7 @@ void Menu::printMenu()
     cout << ">> 방향키( ↓, ↑ ) 또는 'z'( 선택 )를 눌러주세요!!";
 }
 
-std::pair<bool, Item> Menu::navigateMenu()
+pair<bool, Item> Menu::navigateMenu()
 {
     while (true)
     {
@@ -430,7 +402,6 @@ std::pair<bool, Item> Menu::navigateMenu()
     }
 }
 
-
 vector<MenuOption> Inventory::getMenuOptions(bool emptySlot)
 {
     if (emptySlot)
@@ -448,41 +419,71 @@ MenuOption Menu::getSelectedOption() const
     return options[selectedIndex];
 }
 
+ItemSelector::ItemSelector(const vector<Item>& items) : items(items), selectedIndex(0) {}
+
 void ItemSelector::printItems()
 {
     system("cls");
-    cout << "\n\n" << "\t\t 아이템 선택" << "\n\n";
+
+    int cellWidth = 25;
+    int menuHeight = items.size() * 2 + 3;
+    COORD consoleSize = getConsoleSize();
+    int startX = (consoleSize.X - cellWidth) / 2;
+    int startY = (consoleSize.Y - menuHeight) / 2;
+
+    setCursorPosition((consoleSize.X - 9) / 2, startY);
+    cout << "아이템 선택" << endl;
+
+    startY++;
+
+    setCursorPosition(startX, startY);
+    cout << "+" << string(cellWidth, '-') << "+";
+    startY++;
 
     for (int i = 0; i < items.size(); i++)
     {
+        setCursorPosition(startX, startY + i * 2);
+        string itemText;
+
         switch (items[i])
         {
-        case Item::ITEM_0:
-            cout << "\t\t 검";
-            break;
-        case Item::ITEM_1:
-            cout << "\t\t 방패";
-            break;
-        case Item::ITEM_2:
-            cout << "\t\t 지팡이";
-            break;
-        case Item::ITEM_3:
-            cout << "\t\t 활";
-            break;
-        case Item::ITEM_4:
-            cout << "\t\t 뒤로 가기";
-            break;
-        case Item::ITEM_5:
-            cout << "\t\t 비어 있는 공간";
-            break;
-        default:
-            cout << "\t\t 알 수 없음";
+        case Item::ITEM_0: itemText = "검"; break;
+        case Item::ITEM_1: itemText = "방패"; break;
+        case Item::ITEM_2: itemText = "지팡이"; break;
+        case Item::ITEM_3: itemText = "활"; break;
+        case Item::ITEM_4: itemText = "뒤로 가기"; break;
+        case Item::ITEM_5: itemText = "비어 있음"; break;
+        default: itemText = "알 수 없음";
+        }
+        int paddingSize = (cellWidth - itemText.size()) / 2;
+        string paddingLeft(paddingSize, ' ');
+        string paddingRight(paddingSize - 1, ' ');
+
+        if (itemText.size() % 2 == 1)
+            paddingLeft.pop_back();
+
+        if (i == selectedIndex)
+        {
+            cout << "|" + paddingLeft + itemText + paddingRight + "◀";
+        }
+        else
+        {
+            cout << "|" + paddingLeft + " " + itemText + paddingRight + " ";
         }
 
-        cout << (i == selectedIndex ? " ◀" : "") << "\n\n";
+        cout << "|" << endl;
+
+        if (i != items.size() - 1)
+        {
+            setCursorPosition(startX, startY + i * 2 + 1);
+            cout << "+" << string(cellWidth, '-') << "+";
+        }
     }
 
-    cout << "\n\t\t>> 방향키( ↓, ↑ ) 또는 'z'( 선택 )를 눌러주세요!!\n";
+    setCursorPosition(startX, startY + menuHeight - 4);
+    cout << "+" << string(cellWidth, '-') << "+";
+    setCursorPosition(startX, startY + menuHeight - 2);
+    cout << ">> 방향키( ↓, ↑ ) 또는 'z'( 선택 )를 눌러주세요!!";
 }
 
 void Inventory::setItem(int row, int col, Item item)
@@ -592,19 +593,6 @@ void Game::Ineventory(int num)
     }
 }
 
-int getDisplayLength(const string& s)
-{
-    int length = 0;
-    for (char c : s) {
-        if ((c & 0x80) != 0)
-            length += 2;
-        else
-            length += 1;
-    }
-    return length;
-}
-
-
 void initializePlayer(vector<PlayerLevel>& player)
 {
     player.clear();
@@ -613,7 +601,6 @@ void initializePlayer(vector<PlayerLevel>& player)
     player.push_back(PlayerLevel::LEVEL_3);
     player.push_back(PlayerLevel::LEVEL_4);
 }
-
 
 void initializeInven(vector<vector<Item>>& inven)
 {
